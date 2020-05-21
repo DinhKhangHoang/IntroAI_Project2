@@ -153,57 +153,80 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        def minValue(gameState, depth, agentcounter):
-            minimum = ["", float("inf")]
-            ghostActions = gameState.getLegalActions(agentcounter)
+        # def minValue(gameState, depth, agentIndex):
+        #     minimum = ["", float("inf")]
+        #     ghostActions = gameState.getLegalActions(agentIndex)
 
-            if not ghostActions:
-                return self.evaluationFunction(gameState)
+        #     if len(ghostActions) <= 0:
+        #         return self.evaluationFunction(gameState)
 
-            for action in ghostActions:
-                currState = gameState.generateSuccessor(agentcounter, action)
-                current = minOrMax(currState, depth, agentcounter + 1)
-                if type(current) is not list:
-                    newVal = current
-                else:
-                    newVal = current[1]
-                if newVal < minimum[1]:
-                    minimum = [action, newVal]
-            return minimum
+        #     for action in ghostActions:
+        #         currentState = gameState.generateSuccessor(agentIndex, action)
+        #         score = minOrMax(currentState, depth, agentIndex + 1)
+        #         if type(score) is not list:
+        #             value = score
+        #         else:
+        #             value = score[1]
+        #         if value < minimum[1]:
+        #             minimum = [action, value]
+        #     return minimum
 
-        def maxValue(gameState, depth, agentcounter):
-            maximum = ["", -float("inf")]
-            actions = gameState.getLegalActions(agentcounter)
+        # def maxValue(gameState, depth, agentIndex):
+        #     maximum = ["", -float("inf")]
+        #     pacmanActions = gameState.getLegalActions(agentIndex)
 
-            if not actions:
-                return self.evaluationFunction(gameState)
+        #     if len(pacmanActions) <= 0:
+        #         return self.evaluationFunction(gameState)
 
-            for action in actions:
-                currState = gameState.generateSuccessor(agentcounter, action)
-                current = minOrMax(currState, depth, agentcounter + 1)
-                if type(current) is not list:
-                    newVal = current
-                else:
-                    newVal = current[1]
-                if newVal > maximum[1]:
-                    maximum = [action, newVal]
-            return maximum
+        #     for action in pacmanActions:
+        #         currState = gameState.generateSuccessor(agentIndex, action)
+        #         score = minOrMax(currState, depth, agentIndex + 1)
+        #         if type(score) is not list:
+        #             value = score
+        #         else:
+        #             value = score[1]
+        #         if value > maximum[1]:
+        #             maximum = [action, value]
+        #     return maximum
 
 
-        def minOrMax(gameState, depth, agentcounter):
-            if agentcounter >= gameState.getNumAgents():
-                depth += 1
-                agentcounter = 0
+        # def minOrMax(gameState, depth, agentIndex):
+        #     if agentIndex >= gameState.getNumAgents():
+        #         depth += 1
+        #         agentIndex = 0
 
-            if (depth == self.depth or gameState.isWin() or gameState.isLose()):
-                return self.evaluationFunction(gameState)
-            elif (agentcounter == 0):
-                return maxValue(gameState, depth, agentcounter)
+        #     if (depth == self.depth or gameState.isWin() or gameState.isLose()):
+        #         return self.evaluationFunction(gameState)
+        #     elif (agentIndex == 0):
+        #         return maxValue(gameState, depth, agentIndex)
+        #     else:
+        #         return minValue(gameState, depth, agentIndex)
+            
+
+        # actionChosen = minOrMax(gameState, 0, 0)
+        # return actionChosen[0]
+        def minValue(state, agentIndex, depth):
+            ghostActions = state.getLegalActions(agentIndex)
+            if not ghostActions:  # NO legalActions means game finished(win or lose)
+                return self.evaluationFunction(state)
+
+            # When all ghosts moved, it's pacman's turn
+            if agentIndex == state.getNumAgents() - 1:
+                return min(maxValue(state.generateSuccessor(agentIndex, action), depth) for action in ghostActions)
             else:
-                return minValue(gameState, depth, agentcounter)
+                return min(minValue(state.generateSuccessor(agentIndex, action), agentIndex + 1, depth) for action in
+                           ghostActions)
 
-        actionsList = minOrMax(gameState, 0, 0)
-        return actionsList[0]
+        def maxValue(state, depth):
+            pacmanActions = state.getLegalActions(0)
+            if not pacmanActions or depth == self.depth:
+                return self.evaluationFunction(state)
+
+            return max(minValue(state.generateSuccessor(0, action), 0 + 1, depth + 1) for action in pacmanActions)
+
+        bestAction = max(gameState.getLegalActions(0),
+                         key=lambda action: minValue(gameState.generateSuccessor(0, action), 1, 1))
+        return bestAction
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -215,7 +238,67 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def minValue(gameState, depth, agentcounter, a, b):
+            minimum = ["", float("inf")]
+            ghostActions = gameState.getLegalActions(agentcounter)
+
+            if not ghostActions:
+                return self.evaluationFunction(gameState)
+
+            for action in ghostActions:
+                currState = gameState.generateSuccessor(agentcounter, action)
+                current = minOrMax(currState, depth, agentcounter + 1, a, b)
+
+                if type(current) is not list:
+                    newVal = current
+                else:
+                    newVal = current[1]
+
+                if newVal < minimum[1]:
+                    minimum = [action, newVal]
+                if newVal < a:
+                    return [action, newVal]
+                b = min(b, newVal)
+            return minimum
+
+        def maxValue(gameState, depth, agentcounter, a, b):
+            maximum = ["", -float("inf")]
+            actions = gameState.getLegalActions(agentcounter)
+
+            if not actions:
+                return self.evaluationFunction(gameState)
+
+            for action in actions:
+                currState = gameState.generateSuccessor(agentcounter, action)
+                current = minOrMax(currState, depth, agentcounter + 1, a, b)
+
+                if type(current) is not list:
+                    newVal = current
+                else:
+                    newVal = current[1]
+
+                # real logic
+                if newVal > maximum[1]:
+                    maximum = [action, newVal]
+                if newVal > b:
+                    return [action, newVal]
+                a = max(a, newVal)
+            return maximum
+
+        def minOrMax(gameState, depth, agentcounter, a, b):
+            if agentcounter >= gameState.getNumAgents():
+                depth += 1
+                agentcounter = 0
+
+            if (depth == self.depth or gameState.isWin() or gameState.isLose()):
+                return self.evaluationFunction(gameState)
+            elif (agentcounter == 0):
+                return maxValue(gameState, depth, agentcounter, a, b)
+            else:
+                return minValue(gameState, depth, agentcounter, a, b)
+
+        actionsList = minOrMax(gameState, 0, 0, -float("inf"), float("inf"))
+        return actionsList[0]
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
